@@ -420,7 +420,7 @@ class MPVController: NSObject {
   }
 
   // MARK: - Command & property
-  
+
   private func makeCArgs(_ command: MPVCommand, _ args: [String?]) -> [String?] {
     if args.count > 0 && args.last == nil {
       Logger.fatal("Command do not need a nil suffix")
@@ -468,6 +468,10 @@ class MPVController: NSObject {
     if checkError {
       chkErr(returnValue)
     }
+  }
+
+  func observe(property: String) {
+    mpv_observe_property(mpv, 0, property, MPV_FORMAT_NONE)
   }
 
   // Set property
@@ -695,7 +699,7 @@ class MPVController: NSObject {
       } else {
         player.info.shouldAutoLoadFiles = false
       }
-      
+
     case MPV_EVENT_COMMAND_REPLY:
       let reply = event.pointee.reply_userdata
       if reply == MPVController.UserData.screenshot {
@@ -705,6 +709,11 @@ class MPVController: NSObject {
     default: break
       // let eventName = String(cString: mpv_event_name(eventId))
       // Utility.log("mpv event (unhandled): \(eventName)")
+    }
+
+    let eventName = String(cString: mpv_event_name(eventId))
+    if let listeners = player.pluginMPVEventListeners[eventName] {
+      listeners.forEach { $0.call() }
     }
   }
 
@@ -1013,6 +1022,24 @@ class MPVController: NSObject {
       DispatchQueue.main.async {
         self.player.mainWindow.quickSettingView.reload()
       }
+    }
+
+    if let listeners = player.pluginMPVPropertyListeners[name] {
+      // FIXME: better convert to JSValue before passing to call()
+      let data: Any
+      switch property.format {
+      case MPV_FORMAT_FLAG:
+        data = property.data.bindMemory(to: Bool.self, capacity: 1).pointee
+      case MPV_FORMAT_INT64:
+        data = property.data.bindMemory(to: Int64.self, capacity: 1).pointee
+      case MPV_FORMAT_DOUBLE:
+        data = property.data.bindMemory(to: Double.self, capacity: 1).pointee
+      case MPV_FORMAT_STRING:
+        data = property.data.bindMemory(to: String.self, capacity: 1).pointee
+      default:
+        data = 0
+      }
+      listeners.forEach { $0.call(data) }
     }
   }
 
