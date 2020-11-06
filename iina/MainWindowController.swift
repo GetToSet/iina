@@ -577,7 +577,7 @@ class MainWindowController: PlayerWindowController {
 
     // add user default observers
     observedPrefKeys.append(contentsOf: localObservedPrefKeys)
-    observedPrefKeys.forEach { key in
+    localObservedPrefKeys.forEach { key in
       UserDefaults.standard.addObserver(self, forKeyPath: key.rawValue, options: .new, context: nil)
     }
 
@@ -598,12 +598,6 @@ class MainWindowController: PlayerWindowController {
       self.cachedScreenCount = screenCount
       self.videoView.updateDisplayLink()
     }
-
-    NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: nil, using: { [unowned self] _ in
-      if Preference.bool(for: .pauseWhenGoesToSleep) {
-        self.player.pause()
-      }
-    })
 
     player.events.emit(.windowLoaded)
   }
