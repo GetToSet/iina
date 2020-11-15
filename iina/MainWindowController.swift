@@ -1107,6 +1107,8 @@ class MainWindowController: PlayerWindowController {
     cv.trackingAreas.forEach(cv.removeTrackingArea)
     playSlider.trackingAreas.forEach(playSlider.removeTrackingArea)
     UserDefaults.standard.set(NSStringFromRect(window!.frame), forKey: "MainWindowLastPosition")
+    
+    player.events.emit(.windowWillClose)
   }
 
   // MARK: - Window delegate: Full screen
@@ -1218,6 +1220,8 @@ class MainWindowController: PlayerWindowController {
       #available(macOS 10.12, *) {
       exitPIP()
     }
+    
+    player.events.emit(.windowFullscreenChanged, data: true)
   }
 
   func windowWillExitFullScreen(_ notification: Notification) {
@@ -1287,6 +1291,8 @@ class MainWindowController: PlayerWindowController {
 
     resetCollectionBehavior()
     updateWindowParametersForMPV()
+    
+    player.events.emit(.windowFullscreenChanged, data: false)
   }
 
   func toggleWindowFullScreen() {
@@ -1503,7 +1509,10 @@ class MainWindowController: PlayerWindowController {
       oldScale != Double(window!.backingScaleFactor) {
       videoView.videoLayer.contentsScale = window!.backingScaleFactor
     }
-
+  }
+  
+  override func windowDidChangeScreen(_ notification: Notification) {
+    player.events.emit(.windowScreenChanged)
   }
 
   // MARK: - Window delegate: Activeness status
@@ -1539,6 +1548,7 @@ class MainWindowController: PlayerWindowController {
     if fsState.isFullscreen && Preference.bool(for: .blackOutMonitor) {
       blackOutOtherMonitors()
     }
+    player.events.emit(.windowMainStatusChanged, data: true)
   }
 
   override func windowDidResignMain(_ notification: Notification) {
@@ -1546,6 +1556,7 @@ class MainWindowController: PlayerWindowController {
     if Preference.bool(for: .blackOutMonitor) {
       removeBlackWindow()
     }
+    player.events.emit(.windowMainStatusChanged, data: false)
   }
 
   func windowWillMiniaturize(_ notification: Notification) {
@@ -1561,6 +1572,7 @@ class MainWindowController: PlayerWindowController {
         enterPIP()
       }
     }
+    player.events.emit(.windowMiniaturized)
   }
 
   func windowDidDeminiaturize(_ notification: Notification) {
@@ -1573,6 +1585,7 @@ class MainWindowController: PlayerWindowController {
         exitPIP()
       }
     }
+    player.events.emit(.windowDeminiaturized)
   }
 
   // MARK: - UI: Show / Hide
